@@ -85,6 +85,7 @@
 
   .q-num{font-size:18px;color:var(--blue-deep);font-weight:700;letter-spacing:1px;margin-bottom:10px}
   .q-title{font-size:26px;font-weight:700;margin-bottom:10px;line-height:1.5}
+  .q-title.big{font-size:36px}
   .q-hint{font-size:19px;color:var(--ink-soft);margin-bottom:20px;white-space:pre-line;line-height:1.7}
   .q-hint.warn{
     font-size:22px;line-height:1.7;
@@ -119,6 +120,14 @@
   .quick-fill.selected{background:var(--blue);color:#fff}
   .chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
   .chips .quick-fill{margin-bottom:0}
+
+  .history-label{font-size:16px;font-weight:600;color:var(--ink-soft);margin-bottom:10px}
+  .history-fill{
+    border-color:var(--rose) !important;
+    background:rgba(242,166,201,0.14) !important;color:#a84f74 !important;
+  }
+  .history-fill:hover{background:rgba(242,166,201,0.26) !important}
+  .history-fill.selected{background:var(--rose) !important;color:#fff !important}
 
   .portion-label{font-size:18px;font-weight:700;color:var(--ink);margin:18px 0 12px}
   .portion-options{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
@@ -230,6 +239,7 @@
     .opt{background:rgba(255,255,255,0.55) !important;color:#2C2438 !important}
     .none-toggle{background:rgba(255,255,255,0.4) !important;color:#7A7086 !important}
     .quick-fill{background:rgba(155,127,232,0.12) !important;color:#6D5BD0 !important}
+    .history-fill{background:rgba(242,166,201,0.14) !important;color:#a84f74 !important}
     .portion-opt{background:rgba(255,255,255,0.55) !important;color:#2C2438 !important}
     .summary{background:rgba(255,255,255,0.65) !important;color:#7A7086 !important}
   }
@@ -271,8 +281,39 @@ function nowStr(){
   return `${h}:${mi}`;
 }
 
+const HISTORY_STORAGE_KEY = "mealLogHistory_v1";
+const HISTORY_MAX = 6;
+
+function loadHistory(){
+  try{
+    return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "{}");
+  }catch(e){
+    return {};
+  }
+}
+function saveHistoryToStorage(history){
+  try{
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  }catch(e){
+    // 私密瀏覽模式或儲存空間被封鎖時，安靜地放棄，不影響其他功能
+  }
+}
+const history = loadHistory();
+
+function rememberHistory(key, rawValue){
+  const items = String(rawValue).split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
+  if(items.length === 0) return;
+  let list = history[key] || [];
+  items.forEach(item=>{
+    list = list.filter(x=>x !== item);
+    list.unshift(item);
+  });
+  history[key] = list.slice(0, HISTORY_MAX);
+  saveHistoryToStorage(history);
+}
+
 const questions = [
-  {key:"date", label:"日期", t:"今天是幾號？", type:"date", default:todayStr()},
+  {key:"date", label:"日期", t:"日期", type:"date", default:todayStr(), bigTitle:true},
   {
     key:"meal", label:"哪一餐", t:"這是哪一餐？", type:"radio",
     opts:["早餐","午餐","晚餐"]
@@ -306,6 +347,7 @@ function render(){
   let noneToggleHtml = "";
   let quickFillHtml = "";
   let portionHtml = "";
+  let historyHtml = "";
   if(q.type==="text"){
     field = `<textarea id="fld" rows="1" placeholder="請在此填寫" ${isNone?"disabled":""}>${escapeHtml(answers[q.key])}</textarea>`;
     if(!q.noToggle){
@@ -334,6 +376,15 @@ function render(){
         return `<label class="portion-opt ${sel}"><input type="radio" name="portion" value="${escapeAttr(p)}" ${curPortion===p?"checked":""}>${p}</label>`;
       }).join("") + `</div>`;
     }
+    const presetList = q.quickFill ? q.quickFill : [];
+    const pastItems = (history[q.key] || []).filter(item => !presetList.includes(item));
+    if(pastItems.length > 0){
+      const current = answers[q.key].split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
+      historyHtml = `<div class="history-label">你上次還${q.verb||"吃"}過</div><div class="chips">` + pastItems.map(val=>{
+        const sel = current.includes(val) ? "selected" : "";
+        return `<button type="button" class="quick-fill history-fill ${sel}" onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
+      }).join("") + `</div>`;
+    }
   } else if(q.type==="date"){
     field = `<input type="date" id="fld" value="${escapeAttr(answers[q.key])}">`;
   } else if(q.type==="time"){
@@ -354,10 +405,11 @@ function render(){
     <div class="progress-text">第${idx+1}項／共${total}項</div>
     <div class="card">
       <div class="q-num">${q.label}</div>
-      <div class="q-title">${q.t}</div>
+      <div class="q-title${q.bigTitle?" big":""}">${q.t}</div>
       ${hintHtml}
       ${noneToggleHtml}
       ${quickFillHtml}
+      ${historyHtml}
       ${field}
       ${portionHtml}
       ${warnHtml}
@@ -440,7 +492,11 @@ function toggleQuickFill(e, val){
 
 function saveCurrent(){
   const f=document.getElementById("fld");
-  if(f && !f.disabled) answers[questions[idx].key]=f.value.trim();
+  const q = questions[idx];
+  if(f && !f.disabled){
+    answers[q.key]=f.value.trim();
+    if(q.type==="text" && answers[q.key]) rememberHistory(q.key, answers[q.key]);
+  }
 }
 
 function flash(e){
