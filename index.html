@@ -554,7 +554,7 @@ function formatTime(hm){
 
 function foodLine(key,label,verb){
   if(noneAnswers[key]) return `☐ ${label}：（沒有${verb||"吃"}）`;
-  const val = answers[key]||"（未填）";
+  const val = answers[key]||"";
   const portion = portionAnswers[key];
   if(portion && portion !== "沒吃"){
     return `☐ ${label}：${val}（${portion}）`;
@@ -565,9 +565,9 @@ function foodLine(key,label,verb){
 function buildText(){
   const lines = [
     "【減醣餐紀錄表】",
-    `日期：${formatDate(answers.date)||"（未填）"}`,
-    `哪一餐：${answers.meal||"（未填）"}`,
-    `幾點吃：${formatTime(answers.time)||"（未填）"}`,
+    `日期：${formatDate(answers.date)}`,
+    `哪一餐：${answers.meal}`,
+    `幾點吃：${formatTime(answers.time)}`,
     foodLine("protein","蛋白質"),
     foodLine("starch","澱粉"),
     foodLine("fat","油脂"),
