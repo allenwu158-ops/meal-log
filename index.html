@@ -146,7 +146,7 @@
   input:disabled{
     opacity:.45;background:rgba(120,120,128,0.1);cursor:not-allowed;
   }
-  textarea{resize:vertical;min-height:96px}
+  textarea{resize:none;min-height:58px;line-height:1.4;overflow:hidden;transition:height .1s ease}
 
   .options{display:flex;flex-direction:column;gap:12px}
   .opt{
@@ -307,7 +307,7 @@ function render(){
   let quickFillHtml = "";
   let portionHtml = "";
   if(q.type==="text"){
-    field = `<input type="text" id="fld" value="${escapeAttr(answers[q.key])}" placeholder="請在此填寫" ${isNone?"disabled":""}>`;
+    field = `<textarea id="fld" rows="1" placeholder="請在此填寫" ${isNone?"disabled":""}>${escapeHtml(answers[q.key])}</textarea>`;
     if(!q.noToggle){
       noneToggleHtml = `<label class="none-toggle ${isNone?"selected":""}">
         <input type="checkbox" id="noneChk" ${isNone?"checked":""}>
@@ -370,8 +370,19 @@ function render(){
   wire(q);
 }
 
+function autoGrow(el){
+  if(!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
 function wire(q){
   if(q.type==="text"){
+    const fld = document.getElementById("fld");
+    if(fld){
+      autoGrow(fld);
+      fld.addEventListener("input", ()=>autoGrow(fld));
+    }
     const chk = document.getElementById("noneChk");
     if(chk){
       chk.addEventListener("change", ()=>{
@@ -423,6 +434,7 @@ function toggleQuickFill(e, val){
   else { items.push(val); btn.classList.add("selected"); }
   f.value = items.join("、");
   answers[questions[idx].key] = f.value;
+  autoGrow(f);
   void btn.offsetHeight; // 強制重繪，修正iOS毛玻璃背景下顏色不更新的問題
 }
 
