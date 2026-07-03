@@ -358,31 +358,34 @@ function render(){
     }
     if(q.quickFill){
       const current = answers[q.key].split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
+      const chipStyle = `style="background:#9B7FE8;color:#ffffff;border-color:#9B7FE8;border-width:4px;font-weight:800"`;
       if(q.quickFill.length === 1){
         const val = q.quickFill[0];
-        const sel = current.includes(val) ? "selected" : "";
-        quickFillHtml = `<button type="button" class="quick-fill ${sel}" onclick="toggleQuickFill(event,'${escapeAttr(val)}')">🍽️ 外食不確定？點我填入「${val}」</button>`;
+        const sel = current.includes(val);
+        quickFillHtml = `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?chipStyle:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">🍽️ 外食不確定？點我填入「${val}」</button>`;
       } else {
         quickFillHtml = `<div class="chips">` + q.quickFill.map(val=>{
-          const sel = current.includes(val) ? "selected" : "";
-          return `<button type="button" class="quick-fill ${sel}" onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
+          const sel = current.includes(val);
+          return `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?chipStyle:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
         }).join("") + `</div>`;
       }
     }
     if(q.portions){
       const curPortion = portionAnswers[q.key];
       portionHtml = `<div class="portion-label">這次的份量大概是？</div><div class="portion-options">` + q.portions.map(p=>{
-        const sel = curPortion===p ? "selected" : "";
-        return `<label class="portion-opt ${sel}"><input type="radio" name="portion" value="${escapeAttr(p)}" ${curPortion===p?"checked":""}>${p}</label>`;
+        const sel = curPortion===p;
+        const inlineStyle = sel ? `style="background:#1f8f73;color:#ffffff;border-color:#1f8f73;border-width:4px;font-weight:800"` : "";
+        return `<button type="button" class="portion-opt ${sel?"selected":""}" ${inlineStyle} onclick="selectPortion(event,'${escapeAttr(p)}')">${p}</button>`;
       }).join("") + `</div>`;
     }
     const presetList = q.quickFill ? q.quickFill : [];
     const pastItems = (history[q.key] || []).filter(item => !presetList.includes(item));
     if(pastItems.length > 0){
       const current = answers[q.key].split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
+      const histStyle = `style="background:#F2A6C9;color:#ffffff;border-color:#F2A6C9;border-width:4px;font-weight:800"`;
       historyHtml = `<div class="history-label">你上次還${q.verb||"吃"}過</div><div class="chips">` + pastItems.map(val=>{
-        const sel = current.includes(val) ? "selected" : "";
-        return `<button type="button" class="quick-fill history-fill ${sel}" onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
+        const sel = current.includes(val);
+        return `<button type="button" class="quick-fill history-fill ${sel?"selected":""}" ${sel?histStyle:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
       }).join("") + `</div>`;
     }
   } else if(q.type==="date"){
@@ -452,18 +455,6 @@ function wire(q){
         render();
       }, {once:false});
     }
-    if(q.portions){
-      app.querySelectorAll('input[name=portion]').forEach(r=>{
-        r.addEventListener("change", ()=>{
-          const f = document.getElementById("fld");
-          if(f && !f.disabled) answers[q.key] = f.value.trim();
-          portionAnswers[q.key] = r.value;
-          noneAnswers[q.key] = (r.value === "沒吃");
-          if(noneAnswers[q.key]) answers[q.key] = "";
-          render();
-        });
-      });
-    }
   }
   if(q.type==="radio"){
     app.querySelectorAll('input[name=r]').forEach(r=>{
@@ -476,18 +467,50 @@ function wire(q){
   }
 }
 
+function selectPortion(e, val){
+  e.preventDefault();
+  const q = questions[idx];
+  const f = document.getElementById("fld");
+  if(f && !f.disabled) answers[q.key] = f.value.trim();
+  // 再點一次同一個選項可以取消
+  portionAnswers[q.key] = (portionAnswers[q.key] === val) ? "" : val;
+  noneAnswers[q.key] = (portionAnswers[q.key] === "沒吃");
+  if(noneAnswers[q.key]) answers[q.key] = "";
+  render();
+}
+
+function paintChip(btn, selected){
+  // 直接寫行內樣式，優先權最高，繞開手機瀏覽器在毛玻璃背景下不重繪class顏色的問題
+  // 同時改變邊框粗細，這會強制瀏覽器重排（不只是重繪），不可能被跳過
+  const isHistory = btn.classList.contains("history-fill");
+  if(selected){
+    btn.classList.add("selected");
+    btn.style.background = isHistory ? "#F2A6C9" : "#9B7FE8";
+    btn.style.color = "#ffffff";
+    btn.style.borderColor = isHistory ? "#F2A6C9" : "#9B7FE8";
+    btn.style.borderWidth = "4px";
+    btn.style.fontWeight = "800";
+  } else {
+    btn.classList.remove("selected");
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.style.borderColor = "";
+    btn.style.borderWidth = "";
+    btn.style.fontWeight = "";
+  }
+}
+
 function toggleQuickFill(e, val){
   e.preventDefault();
   const btn = e.currentTarget;
   const f = document.getElementById("fld");
   let items = f.value.split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
   const i = items.indexOf(val);
-  if(i > -1){ items.splice(i,1); btn.classList.remove("selected"); }
-  else { items.push(val); btn.classList.add("selected"); }
+  if(i > -1){ items.splice(i,1); paintChip(btn, false); }
+  else { items.push(val); paintChip(btn, true); }
   f.value = items.join("、");
   answers[questions[idx].key] = f.value;
   autoGrow(f);
-  void btn.offsetHeight; // 強制重繪，修正iOS毛玻璃背景下顏色不更新的問題
 }
 
 function saveCurrent(){
