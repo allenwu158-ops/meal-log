@@ -321,6 +321,7 @@ const questions = [
     opts:["早餐","午餐","晚餐"]
   },
   {key:"time", label:"幾點吃", t:"幾點吃的？", type:"time", default:"", hint:"滑動選擇正確的用餐時間，不是現在的時間"},
+  {key:"note", label:"今日狀況", t:"今日狀況", type:"text", hint:"有特別狀況才需要填，例如：家庭聚餐、生理期、感冒、應酬", noneLabel:"沒有特殊狀況"},
   {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」", noToggle:true, portions:["沒吃","不到一個掌心","大約一個掌心","超過一個掌心"]},
   {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", noToggle:true, quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉","雪蓮子／鷹嘴豆"], portions:["沒吃","1/3拳頭","半拳頭","一拳頭","超過一拳頭"]},
   {key:"fat", label:"油脂", t:"油脂吃了什麼？", type:"text", hint:"例如：堅果、酪梨、橄欖油", noToggle:true, quickFill:["MCT油","餐廳的油"]},
@@ -355,21 +356,22 @@ function render(){
     if(!q.noToggle){
       noneToggleHtml = `<label class="none-toggle ${isNone?"selected":""}">
         <input type="checkbox" id="noneChk" ${isNone?"checked":""}>
-        <span>這一餐沒有${q.verb||"吃"}${q.label}</span>
+        <span>${q.noneLabel || `這一餐沒有${q.verb||"吃"}${q.label}`}</span>
       </label>`;
     }
     if(q.quickFill){
       const current = answers[q.key].split(/、|,|，/).map(s=>s.trim()).filter(Boolean);
       const btnStyle = `border-color:#9B7FE8;border-width:4px;font-weight:800;color:#fff`;
       const fillSpan = (op)=>`<span class="chip-fill" style="background:#9B7FE8;opacity:${op}"></span>`;
+      const checkSpan = (on)=>`<span class="chip-check">${on?"✓ ":""}</span>`;
       if(q.quickFill.length === 1){
         const val = q.quickFill[0];
         const sel = current.includes(val);
-        quickFillHtml = `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?`style="${btnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fillSpan(sel?1:0)}🍽️ 外食不確定？點我填入「${val}」</button>`;
+        quickFillHtml = `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?`style="${btnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fillSpan(sel?1:0)}${checkSpan(sel)}🍽️ 外食不確定？點我填入「${val}」</button>`;
       } else {
         quickFillHtml = `<div class="chips">` + q.quickFill.map(val=>{
           const sel = current.includes(val);
-          return `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?`style="${btnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fillSpan(sel?1:0)}${val}</button>`;
+          return `<button type="button" class="quick-fill ${sel?"selected":""}" ${sel?`style="${btnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fillSpan(sel?1:0)}${checkSpan(sel)}${val}</button>`;
         }).join("") + `</div>`;
       }
     }
@@ -379,7 +381,8 @@ function render(){
         const sel = curPortion===p;
         const inlineStyle = sel ? `style="border-color:#1f8f73;border-width:4px;font-weight:800;color:#fff"` : "";
         const fill = `<span class="chip-fill" style="background:#1f8f73;opacity:${sel?1:0}"></span>`;
-        return `<button type="button" class="portion-opt ${sel?"selected":""}" ${inlineStyle} onclick="selectPortion(event,'${escapeAttr(p)}')">${fill}${p}</button>`;
+        const check = `<span class="chip-check">${sel?"✓ ":""}</span>`;
+        return `<button type="button" class="portion-opt ${sel?"selected":""}" ${inlineStyle} onclick="selectPortion(event,'${escapeAttr(p)}')">${fill}${check}${p}</button>`;
       }).join("") + `</div>`;
     }
     const presetList = q.quickFill ? q.quickFill : [];
@@ -390,7 +393,8 @@ function render(){
       historyHtml = `<div class="history-label">你上次還${q.verb||"吃"}過</div><div class="chips">` + pastItems.map(val=>{
         const sel = current.includes(val);
         const fill = `<span class="chip-fill" style="background:#F2A6C9;opacity:${sel?1:0}"></span>`;
-        return `<button type="button" class="quick-fill history-fill ${sel?"selected":""}" ${sel?`style="${histBtnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fill}${val}</button>`;
+        const check = `<span class="chip-check">${sel?"✓ ":""}</span>`;
+        return `<button type="button" class="quick-fill history-fill ${sel?"selected":""}" ${sel?`style="${histBtnStyle}"`:""} onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${fill}${check}${val}</button>`;
       }).join("") + `</div>`;
     }
   } else if(q.type==="date"){
@@ -488,18 +492,21 @@ function paintChip(btn, selected){
   // 邊框粗細與色塊透明度雙管齊下：透明度變化是瀏覽器動畫的地基，
   // 不可能被跳過，用來繞開手機瀏覽器在毛玻璃背景下不重繪背景色的問題
   const fillSpan = btn.querySelector(".chip-fill");
+  const checkSpan = btn.querySelector(".chip-check");
   if(selected){
     btn.classList.add("selected");
     btn.style.color = "#ffffff";
     btn.style.borderWidth = "4px";
     btn.style.fontWeight = "800";
     if(fillSpan) fillSpan.style.opacity = "1";
+    if(checkSpan) checkSpan.textContent = "✓ ";
   } else {
     btn.classList.remove("selected");
     btn.style.color = "";
     btn.style.borderWidth = "";
     btn.style.fontWeight = "";
     if(fillSpan) fillSpan.style.opacity = "0";
+    if(checkSpan) checkSpan.textContent = "";
   }
 }
 
@@ -568,6 +575,7 @@ function buildText(){
     `日期：${formatDate(answers.date)}`,
     `哪一餐：${answers.meal}`,
     `幾點吃：${formatTime(answers.time)}`,
+    `今日狀況：${answers.note}`,
     foodLine("protein","蛋白質"),
     foodLine("starch","澱粉"),
     foodLine("fat","油脂"),
