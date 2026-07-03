@@ -118,6 +118,18 @@
   .chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
   .chips .quick-fill{margin-bottom:0}
 
+  .portion-label{font-size:18px;font-weight:700;color:var(--ink);margin:18px 0 12px}
+  .portion-options{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+  .portion-opt{
+    font-family:inherit;font-size:17px;font-weight:600;
+    border:1.5px solid var(--line);border-radius:999px;
+    padding:11px 18px;cursor:pointer;background:rgba(255,255,255,0.55);color:var(--ink);
+    transition:border .15s,background .15s,color .15s;display:inline-flex;align-items:center;
+  }
+  .portion-opt input{position:absolute;opacity:0;pointer-events:none}
+  .portion-opt:hover{border-color:var(--green)}
+  .portion-opt.selected{border-color:#1f8f73;background:rgba(111,224,192,0.28);color:#1f8f73}
+
   input[type=text],input[type=date],input[type=time],textarea{
     width:100%;font-family:inherit;font-size:22px;color:var(--ink);
     border:1.5px solid var(--line);border-radius:14px;
@@ -214,6 +226,7 @@
     .opt{background:rgba(255,255,255,0.55) !important;color:#2C2438 !important}
     .none-toggle{background:rgba(255,255,255,0.4) !important;color:#7A7086 !important}
     .quick-fill{background:rgba(155,127,232,0.12) !important;color:#6D5BD0 !important}
+    .portion-opt{background:rgba(255,255,255,0.55) !important;color:#2C2438 !important}
     .summary{background:rgba(255,255,255,0.65) !important;color:#7A7086 !important}
   }
 </style>
@@ -261,8 +274,8 @@ const questions = [
     opts:["早餐","午餐","晚餐"]
   },
   {key:"time", label:"幾點吃", t:"幾點吃的？", type:"time", default:"", hint:"滑動選擇正確的用餐時間，不是現在的時間"},
-  {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排"},
-  {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉"]},
+  {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」"},
+  {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", noToggle:true, quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉","雪蓮子／鷹嘴豆"], portions:["沒吃","1/3拳頭","半拳頭","一拳頭","超過一拳頭"]},
   {key:"fat", label:"油脂", t:"油脂吃了什麼？", type:"text", hint:"例如：堅果、酪梨、橄欖油", noToggle:true, quickFill:["餐廳的油"]},
   {key:"fruit", label:"水果", t:"水果吃了什麼？", type:"text", hint:"例如：芭樂、蘋果"},
   {key:"seasoning", label:"調味料", t:"調味料用了什麼？", type:"text", hint:"例如：鹽、胡椒、醬油", noToggle:true},
@@ -272,7 +285,8 @@ const questions = [
 
 const answers = {};
 const noneAnswers = {};
-questions.forEach(q=>{ answers[q.key] = q.default || ""; noneAnswers[q.key] = false; });
+const portionAnswers = {};
+questions.forEach(q=>{ answers[q.key] = q.default || ""; noneAnswers[q.key] = false; portionAnswers[q.key] = ""; });
 
 let idx = 0;
 const app = document.getElementById("app");
@@ -287,6 +301,7 @@ function render(){
   let field = "";
   let noneToggleHtml = "";
   let quickFillHtml = "";
+  let portionHtml = "";
   if(q.type==="text"){
     field = `<input type="text" id="fld" value="${escapeAttr(answers[q.key])}" placeholder="請在此填寫" ${isNone?"disabled":""}>`;
     if(!q.noToggle){
@@ -307,6 +322,13 @@ function render(){
           return `<button type="button" class="quick-fill ${sel}" onclick="toggleQuickFill(event,'${escapeAttr(val)}')">${val}</button>`;
         }).join("") + `</div>`;
       }
+    }
+    if(q.portions){
+      const curPortion = portionAnswers[q.key];
+      portionHtml = `<div class="portion-label">這次的份量大概是？</div><div class="portion-options">` + q.portions.map(p=>{
+        const sel = curPortion===p ? "selected" : "";
+        return `<label class="portion-opt ${sel}"><input type="radio" name="portion" value="${escapeAttr(p)}" ${curPortion===p?"checked":""}>${p}</label>`;
+      }).join("") + `</div>`;
     }
   } else if(q.type==="date"){
     field = `<input type="date" id="fld" value="${escapeAttr(answers[q.key])}">`;
@@ -333,6 +355,7 @@ function render(){
       ${noneToggleHtml}
       ${quickFillHtml}
       ${field}
+      ${portionHtml}
       ${warnHtml}
       <div class="nav">
         ${idx>0?`<button class="btn btn-ghost" onclick="prev(event)">上一項</button>`:``}
@@ -360,6 +383,18 @@ function wire(q){
         }
         chk.closest(".none-toggle").classList.toggle("selected", chk.checked);
         render();
+      }, {once:false});
+    }
+    if(q.portions){
+      app.querySelectorAll('input[name=portion]').forEach(r=>{
+        r.addEventListener("change", ()=>{
+          const f = document.getElementById("fld");
+          if(f && !f.disabled) answers[q.key] = f.value.trim();
+          portionAnswers[q.key] = r.value;
+          noneAnswers[q.key] = (r.value === "沒吃");
+          if(noneAnswers[q.key]) answers[q.key] = "";
+          render();
+        });
       });
     }
   }
@@ -420,7 +455,12 @@ function formatTime(hm){
 
 function foodLine(key,label,verb){
   if(noneAnswers[key]) return `☐ ${label}：（沒有${verb||"吃"}）`;
-  return `☐ ${label}：${answers[key]||"（未填）"}`;
+  const val = answers[key]||"（未填）";
+  const portion = portionAnswers[key];
+  if(portion && portion !== "沒吃"){
+    return `☐ ${label}：${val}（${portion}）`;
+  }
+  return `☐ ${label}：${val}`;
 }
 
 function buildText(){
