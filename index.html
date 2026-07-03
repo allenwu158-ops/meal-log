@@ -321,7 +321,7 @@ const questions = [
     opts:["早餐","午餐","晚餐"]
   },
   {key:"time", label:"幾點吃", t:"幾點吃的？", type:"time", default:"", hint:"滑動選擇正確的用餐時間，不是現在的時間"},
-  {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」"},
+  {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」", noToggle:true, portions:["沒吃","不到一個掌心","大約一個掌心","超過一個掌心"]},
   {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", noToggle:true, quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉","雪蓮子／鷹嘴豆"], portions:["沒吃","1/3拳頭","半拳頭","一拳頭","超過一拳頭"]},
   {key:"fat", label:"油脂", t:"油脂吃了什麼？", type:"text", hint:"例如：堅果、酪梨、橄欖油", noToggle:true, quickFill:["MCT油","餐廳的油"]},
   {key:"fruit", label:"水果", t:"水果吃了什麼？", type:"text", hint:"例如：芭樂、蘋果"},
