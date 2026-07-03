@@ -98,6 +98,7 @@
     padding:14px 18px;cursor:pointer;background:rgba(255,255,255,0.4);
     transition:border .2s,background .2s;font-size:20px;font-weight:600;color:var(--ink-soft);
     margin-bottom:14px;
+    -webkit-tap-highlight-color:transparent;-webkit-transform:translateZ(0);transform:translateZ(0);
   }
   .none-toggle:hover{border-color:var(--blue)}
   .none-toggle.selected{
@@ -112,6 +113,7 @@
     border:1.5px solid var(--blue);border-radius:999px;
     padding:10px 18px;cursor:pointer;background:rgba(155,127,232,0.12);color:var(--blue-deep);
     margin-bottom:14px;transition:background .15s,transform .1s;
+    -webkit-tap-highlight-color:transparent;-webkit-transform:translateZ(0);transform:translateZ(0);
   }
   .quick-fill:hover{background:rgba(155,127,232,0.22)}
   .quick-fill.selected{background:var(--blue);color:#fff}
@@ -125,6 +127,7 @@
     border:1.5px solid var(--line);border-radius:999px;
     padding:11px 18px;cursor:pointer;background:rgba(255,255,255,0.55);color:var(--ink);
     transition:border .15s,background .15s,color .15s;display:inline-flex;align-items:center;
+    -webkit-tap-highlight-color:transparent;-webkit-transform:translateZ(0);transform:translateZ(0);
   }
   .portion-opt input{position:absolute;opacity:0;pointer-events:none}
   .portion-opt:hover{border-color:var(--green)}
@@ -151,6 +154,7 @@
     border:1.5px solid var(--line);border-radius:14px;
     padding:16px 18px;cursor:pointer;background:rgba(255,255,255,0.55);
     transition:border .2s,background .2s,transform .1s;font-size:23px;line-height:1.55;
+    -webkit-tap-highlight-color:transparent;-webkit-transform:translateZ(0);transform:translateZ(0);
   }
   .opt:hover{border-color:var(--blue)}
   .opt.selected{border-color:var(--blue);background:rgba(155,127,232,0.14)}
@@ -419,6 +423,7 @@ function toggleQuickFill(e, val){
   else { items.push(val); btn.classList.add("selected"); }
   f.value = items.join("、");
   answers[questions[idx].key] = f.value;
+  void btn.offsetHeight; // 強制重繪，修正iOS毛玻璃背景下顏色不更新的問題
 }
 
 function saveCurrent(){
