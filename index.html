@@ -367,6 +367,34 @@ const DAY_CHOICE_QUESTION = {
   opts:["減醣餐","作弊餐"], hint:"今天是週末或假日，先問一下你自己的打算"
 };
 
+const MEAL_MODE_QUESTION = {
+  key:"mealMode", label:"這餐怎麼吃", t:"是斷食、還是蛋白質輕斷食、還是吃減醣餐？", type:"radio",
+  opts:["斷食","蛋白質輕斷食","減醣餐"]
+};
+
+const FASTING_QUESTION = {
+  key:"fastingContent", label:"斷食內容", t:"斷食期間喝了什麼？", type:"text", noToggle:true,
+  quickFill:["MCT油","牛蒡茶","低咖啡因咖啡","白開水"]
+};
+
+const PROTEIN_FAST_QUESTION = {
+  key:"proteinFastContent", label:"蛋白質輕斷食", t:"蛋白質輕斷食吃了什麼？", type:"text", noToggle:true
+};
+
+function standardFoodQuestions(){
+  return [
+    {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」", noToggle:true, portions:["沒吃","不到一個掌心","大約一個掌心","超過一個掌心"]},
+    {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", noToggle:true, quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉","雪蓮子／鷹嘴豆"], portions:["沒吃","1/3拳頭","半拳頭","一拳頭","超過一拳頭"]},
+    {key:"fat", label:"油脂", t:"油脂吃了什麼？", type:"text", hint:"例如：堅果、酪梨、橄欖油", noToggle:true, quickFill:["MCT油","餐廳的油"]},
+    {key:"fruit", label:"水果", t:"水果吃了什麼？", type:"text", hint:"例如：芭樂、蘋果"},
+    {key:"seasoning", label:"調味料", t:"調味料用了什麼？", type:"text", hint:"例如：鹽、胡椒、醬油", noToggle:true},
+    {key:"veggie", label:"青菜", t:"青菜吃了什麼？", type:"text", hint:"例如：花椰菜、地瓜葉"},
+    {key:"drink", label:"飲料／湯品", t:"喝了什麼飲料或湯？", type:"text", hint:"例如：黑咖啡、無糖茶、味噌湯", verb:"喝", quickFill:["黑蒜醋","牛蒡茶"]}
+  ];
+}
+
+const FOOD_KEYS = ["mealMode","fastingContent","proteinFastContent","protein","starch","fat","fruit","seasoning","veggie","drink"];
+
 let questions = [
   {key:"date", label:"日期", t:"日期", type:"date", default:todayStr(), bigTitle:true},
   {
@@ -375,13 +403,7 @@ let questions = [
   },
   {key:"time", label:"幾點吃", t:"幾點吃的？", type:"time", default:"", hint:"滑動選擇正確的用餐時間，不是現在的時間"},
   {key:"note", label:"今日狀況", t:"今日狀況", type:"text", hint:"有特別狀況才需要填，例如：家庭聚餐、生理期、感冒、應酬", noneLabel:"沒有特殊狀況"},
-  {key:"protein", label:"蛋白質", t:"蛋白質吃了什麼？", type:"text", hint:"例如：雞腿、雞胸肉、雞蛋、豬排、牛肉、豆腐、蝦仁", warn:"如果是用炸的、裹粉的，請務必寫清楚，例如：炸雞腿、炸豬排。如果有去皮，請附註「去皮」", noToggle:true, portions:["沒吃","不到一個掌心","大約一個掌心","超過一個掌心"]},
-  {key:"starch", label:"澱粉", t:"澱粉吃了什麼？", type:"text", hint:"點選常見選項，或直接在下面輸入", noToggle:true, quickFill:["長秈白米","一般白米","100%全麥麵包","一般全麥麵包","義大利麵","好控麵","地瓜","綠豆冬粉","一般冬粉","雪蓮子／鷹嘴豆"], portions:["沒吃","1/3拳頭","半拳頭","一拳頭","超過一拳頭"]},
-  {key:"fat", label:"油脂", t:"油脂吃了什麼？", type:"text", hint:"例如：堅果、酪梨、橄欖油", noToggle:true, quickFill:["MCT油","餐廳的油"]},
-  {key:"fruit", label:"水果", t:"水果吃了什麼？", type:"text", hint:"例如：芭樂、蘋果"},
-  {key:"seasoning", label:"調味料", t:"調味料用了什麼？", type:"text", hint:"例如：鹽、胡椒、醬油", noToggle:true},
-  {key:"veggie", label:"青菜", t:"青菜吃了什麼？", type:"text", hint:"例如：花椰菜、地瓜葉"},
-  {key:"drink", label:"飲料／湯品", t:"喝了什麼飲料或湯？", type:"text", hint:"例如：黑咖啡、無糖茶、味噌湯", verb:"喝", quickFill:["黑蒜醋","牛蒡茶"]}
+  ...standardFoodQuestions()
 ];
 
 const answers = {};
@@ -406,6 +428,31 @@ function rebuildAfterDate(){
     answers.dayChoice = ""; // 清掉可能殘留的舊選擇，避免日期改回平日後仍誤判
     questions = base;
   }
+  registerAnswerKeys(questions);
+}
+
+// 離開「今日狀況」頁時呼叫：早餐、晚餐才需要多問一題斷食與否；午餐直接進入標準七大類
+function rebuildAfterNote(){
+  const base = questions.filter(q => !FOOD_KEYS.includes(q.key));
+  const noteIdx = base.findIndex(q => q.key === "note");
+  if(answers.meal === "早餐" || answers.meal === "晚餐"){
+    questions = [...base.slice(0, noteIdx+1), MEAL_MODE_QUESTION, ...standardFoodQuestions()];
+  } else {
+    answers.mealMode = ""; // 午餐不需要這一題，清掉殘留答案
+    questions = [...base.slice(0, noteIdx+1), ...standardFoodQuestions()];
+  }
+  registerAnswerKeys(questions);
+}
+
+// 離開「這餐怎麼吃」選擇題時呼叫：依斷食／蛋白質輕斷食／減醣餐，決定接下來的題組
+function rebuildAfterMealMode(){
+  const base = questions.filter(q => !["fastingContent","proteinFastContent","protein","starch","fat","fruit","seasoning","veggie","drink"].includes(q.key));
+  const modeIdx = base.findIndex(q => q.key === "mealMode");
+  let foodBlock;
+  if(answers.mealMode === "斷食") foodBlock = [FASTING_QUESTION];
+  else if(answers.mealMode === "蛋白質輕斷食") foodBlock = [PROTEIN_FAST_QUESTION];
+  else foodBlock = standardFoodQuestions();
+  questions = [...base.slice(0, modeIdx+1), ...foodBlock];
   registerAnswerKeys(questions);
 }
 
@@ -617,7 +664,10 @@ function flash(e){
 function next(e){
   flash(e);
   saveCurrent();
-  if(questions[idx].key === "date") rebuildAfterDate();
+  const leavingKey = questions[idx].key;
+  if(leavingKey === "date") rebuildAfterDate();
+  else if(leavingKey === "note") rebuildAfterNote();
+  else if(leavingKey === "mealMode") rebuildAfterMealMode();
   idx++;
   render();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -656,16 +706,26 @@ function buildText(){
     `日期：${formatDate(answers.date)}`,
     `哪一餐：${answers.meal}`,
     `幾點吃：${formatTime(answers.time)}`,
-    `今日狀況：${answers.note}`,
-    foodLine("protein","蛋白質"),
-    foodLine("starch","澱粉"),
-    foodLine("fat","油脂"),
-    foodLine("fruit","水果"),
-    foodLine("seasoning","調味料"),
-    foodLine("veggie","青菜"),
-    foodLine("drink","飲料／湯品","喝"),
-    WARN
+    `今日狀況：${answers.note}`
   ];
+
+  if(answers.mealMode === "斷食"){
+    lines.push(`☐ 斷食內容：${answers.fastingContent}`);
+  } else if(answers.mealMode === "蛋白質輕斷食"){
+    lines.push(`☐ 蛋白質輕斷食：${answers.proteinFastContent}`);
+  } else {
+    lines.push(
+      foodLine("protein","蛋白質"),
+      foodLine("starch","澱粉"),
+      foodLine("fat","油脂"),
+      foodLine("fruit","水果"),
+      foodLine("seasoning","調味料"),
+      foodLine("veggie","青菜"),
+      foodLine("drink","飲料／湯品","喝")
+    );
+  }
+
+  lines.push(WARN);
   return lines.join("\n");
 }
 
