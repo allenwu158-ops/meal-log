@@ -282,6 +282,54 @@ function nowStr(){
   const mi = String(d.getMinutes()).padStart(2,"0");
   return `${h}:${mi}`;
 }
+function getWeekday(iso){
+  if(!iso) return "";
+  const days = ["日","一","二","三","四","五","六"];
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d.getTime())) return "";
+  return "星期" + days[d.getDay()];
+}
+function isWeekend(iso){
+  if(!iso) return false;
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d.getTime())) return false;
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
+
+// ⚠️ 每年更新一次：這是台灣的國定假日清單（含補假），資料來源為行政院人事行政總處公告。
+// 每年約六月底會公告次年的辦公日曆表，屆時把新的日期換進這個陣列即可，格式是「YYYY-MM-DD」。
+const HOLIDAYS_2026 = [
+  "2026-01-01", // 元旦
+  "2026-02-15", // 小年夜
+  "2026-02-16", // 除夕
+  "2026-02-17", // 初一
+  "2026-02-18", // 初二
+  "2026-02-19", // 初三
+  "2026-02-20", // 小年夜補假
+  "2026-02-27", // 和平紀念日補假
+  "2026-02-28", // 和平紀念日
+  "2026-04-03", // 兒童節補假
+  "2026-04-04", // 兒童節
+  "2026-04-05", // 清明節
+  "2026-05-01", // 勞動節
+  "2026-06-19", // 端午節
+  "2026-09-25", // 中秋節
+  "2026-09-28", // 教師節（孔子誕辰紀念日）
+  "2026-10-09", // 國慶日補假
+  "2026-10-10", // 國慶日
+  "2026-10-25", // 台灣光復節
+  "2026-10-26", // 台灣光復節補假
+  "2026-12-25"  // 行憲紀念日
+];
+
+function isHoliday(iso){
+  return HOLIDAYS_2026.includes(iso);
+}
+
+function isCheatDay(iso){
+  return isWeekend(iso) || isHoliday(iso);
+}
 
 const HISTORY_STORAGE_KEY = "mealLogHistory_v1";
 const HISTORY_MAX = 6;
@@ -314,7 +362,12 @@ function rememberHistory(key, rawValue){
   saveHistoryToStorage(history);
 }
 
-const questions = [
+const DAY_CHOICE_QUESTION = {
+  key:"dayChoice", label:"今天怎麼吃", t:"今天你想要吃作弊餐，還是減醣餐？", type:"radio",
+  opts:["減醣餐","作弊餐"], hint:"今天是週末或假日，先問一下你自己的打算"
+};
+
+let questions = [
   {key:"date", label:"日期", t:"日期", type:"date", default:todayStr(), bigTitle:true},
   {
     key:"meal", label:"哪一餐", t:"這是哪一餐？", type:"radio",
@@ -334,7 +387,27 @@ const questions = [
 const answers = {};
 const noneAnswers = {};
 const portionAnswers = {};
-questions.forEach(q=>{ answers[q.key] = q.default || ""; noneAnswers[q.key] = false; portionAnswers[q.key] = ""; });
+function registerAnswerKeys(list){
+  list.forEach(q=>{
+    if(!(q.key in answers)) answers[q.key] = q.default || "";
+    if(!(q.key in noneAnswers)) noneAnswers[q.key] = false;
+    if(!(q.key in portionAnswers)) portionAnswers[q.key] = "";
+  });
+}
+registerAnswerKeys(questions);
+
+// 離開日期頁時呼叫：平日維持原本流程；週末或國定假日則在日期後面插入一題，讓學員自己選今天要吃減醣餐還是作弊餐
+function rebuildAfterDate(){
+  const base = questions.filter(q => q.key !== "dayChoice");
+  if(isCheatDay(answers.date)){
+    const dateIdx = base.findIndex(q => q.key === "date");
+    questions = [...base.slice(0, dateIdx+1), DAY_CHOICE_QUESTION, ...base.slice(dateIdx+1)];
+  } else {
+    answers.dayChoice = ""; // 清掉可能殘留的舊選擇，避免日期改回平日後仍誤判
+    questions = base;
+  }
+  registerAnswerKeys(questions);
+}
 
 let idx = 0;
 const app = document.getElementById("app");
@@ -541,7 +614,14 @@ function flash(e){
   setTimeout(()=>el.classList.remove("glow"),650);
 }
 
-function next(e){ flash(e); saveCurrent(); idx++; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+function next(e){
+  flash(e);
+  saveCurrent();
+  if(questions[idx].key === "date") rebuildAfterDate();
+  idx++;
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
 function prev(e){ flash(e); saveCurrent(); idx--; render(); window.scrollTo({top:0,behavior:"smooth"}); }
 
 function formatDate(iso){
@@ -570,8 +650,9 @@ function foodLine(key,label,verb){
 }
 
 function buildText(){
+  const title = answers.dayChoice === "作弊餐" ? "作弊餐紀錄表" : "減醣餐紀錄表";
   const lines = [
-    "【減醣餐紀錄表】",
+    `【${title}】`,
     `日期：${formatDate(answers.date)}`,
     `哪一餐：${answers.meal}`,
     `幾點吃：${formatTime(answers.time)}`,
