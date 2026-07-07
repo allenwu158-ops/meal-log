@@ -601,6 +601,14 @@ function render(){
         ${idx>0?`<button class="btn btn-ghost" onclick="prev(event)">上一項</button>`:``}
         <button class="btn btn-primary" onclick="next(event)">${idx===questions.length-1?"完成紀錄":"下一項"}</button>
       </div>
+    </div>
+    <div class="modal-overlay" id="fieldWarnModal">
+      <div class="modal-card">
+        <div class="modal-emoji">✋</div>
+        <h3>還沒填寫喔</h3>
+        <p id="fieldWarnText"></p>
+        <button class="btn btn-primary modal-close" onclick="closeFieldWarnModal()">我知道了</button>
+      </div>
     </div>`;
 
   wire(q);
@@ -716,6 +724,24 @@ function flash(e){
 function next(e){
   flash(e);
   saveCurrent();
+  const q = questions[idx];
+  if(q.portions){
+    const portion = portionAnswers[q.key];
+    const hasText = (answers[q.key]||"").trim().length > 0;
+    if(portion !== "沒吃"){
+      let warnMsg = "";
+      if(!hasText && !portion) warnMsg = `請填寫吃了什麼${q.label}，並選擇份量`;
+      else if(!hasText) warnMsg = `請填寫吃什麼${q.label}`;
+      else if(!portion) warnMsg = `請選擇${q.label}的份量`;
+      if(warnMsg){
+        const modal = document.getElementById("fieldWarnModal");
+        const text = document.getElementById("fieldWarnText");
+        if(text) text.textContent = warnMsg;
+        if(modal) modal.classList.add("show");
+        return;
+      }
+    }
+  }
   const leavingKey = questions[idx].key;
   if(leavingKey === "date") rebuildAfterDate();
   else if(leavingKey === "note") rebuildAfterNote();
@@ -723,6 +749,10 @@ function next(e){
   idx++;
   render();
   window.scrollTo({top:0,behavior:"smooth"});
+}
+function closeFieldWarnModal(){
+  const modal = document.getElementById("fieldWarnModal");
+  if(modal) modal.classList.remove("show");
 }
 function prev(e){ flash(e); saveCurrent(); idx--; render(); window.scrollTo({top:0,behavior:"smooth"}); }
 
